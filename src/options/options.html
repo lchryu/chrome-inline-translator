@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Inline Quick Translate Settings</title>
+    <link rel="stylesheet" href="./options.css">
+  </head>
+  <body>
+    <main class="settings">
+      <h1>Inline Quick Translate</h1>
+
+      <form id="settings-form">
+        <label>
+          Provider
+          <select name="provider">
+            <option value="mock">Mock test</option>
+            <option value="gemini">Gemini</option>
+            <option value="google">Google Cloud Translation</option>
+            <option value="openai">OpenAI</option>
+          </select>
+        </label>
+
+        <label>
+          Source language
+          <input name="sourceLanguage" placeholder="auto" autocomplete="off">
+        </label>
+
+        <label>
+          Target language
+          <input name="targetLanguage" placeholder="vi" autocomplete="off">
+        </label>
+
+        <label>
+          Google API key
+          <input name="googleApiKey" type="password" autocomplete="off">
+        </label>
+
+        <label>
+          OpenAI API key
+          <input name="openaiApiKey" type="password" autocomplete="off">
+        </label>
+
+        <label>
+          OpenAI model
+          <input name="openaiModel" placeholder="gpt-4o-mini" autocomplete="off">
+        </label>
+
+        <label>
+          Gemini API key
+          <input name="geminiApiKey" type="password" autocomplete="off">
+        </label>
+
+        <label>
+          Gemini model
+          <input name="geminiModel" placeholder="gemini-2.5-flash" autocomplete="off">
+        </label>
+
+        <button type="submit">Save</button>
+        <p id="status" role="status"></p>
+      </form>
+    </main>
+
+    <script type="module" src="./options.js"></script>
+  </body>
+</html>
