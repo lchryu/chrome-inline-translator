@@ -23,6 +23,13 @@ document.addEventListener("keyup", (event) => {
   handleSelectionChange();
 });
 
+document.addEventListener("keydown", (event) => {
+  if (event.altKey && event.key.toLowerCase() === "t") {
+    event.preventDefault();
+    translateSelectionInline();
+  }
+});
+
 document.addEventListener("scroll", () => {
   removeToolbar();
   removePanel();
@@ -173,17 +180,7 @@ function insertInlineTranslation({ range, originalText, translatedText, stateCla
     showInlinePanel(wrapper);
   });
 
-  const close = document.createElement("button");
-  close.className = "iqt-inline-close";
-  close.type = "button";
-  close.title = "Remove translation";
-  close.textContent = "x";
-  close.addEventListener("click", (event) => {
-    event.stopPropagation();
-    removeInline(wrapper);
-  });
-
-  wrapper.append(textNode, close);
+  wrapper.append(textNode);
 
   const insertionRange = range.cloneRange();
   insertionRange.collapse(false);
@@ -210,9 +207,21 @@ function showInlinePanel(inline) {
   panel.id = PANEL_ID;
   panel.className = "iqt-panel";
 
+  const header = document.createElement("div");
+  header.className = "iqt-panel-header";
+
   const title = document.createElement("div");
   title.className = "iqt-panel-title";
   title.textContent = "Reading tools";
+
+  const close = document.createElement("button");
+  close.className = "iqt-panel-icon-button";
+  close.type = "button";
+  close.title = "Close";
+  close.textContent = "x";
+  close.addEventListener("click", removePanel);
+
+  header.append(title, close);
 
   const translation = document.createElement("div");
   translation.className = "iqt-panel-translation";
@@ -228,10 +237,10 @@ function showInlinePanel(inline) {
   const buttons = [
     ["Copy", () => copyInlineTranslation(inline)],
     ["Explain", () => runReadingAction(inline, "explain", output)],
-    ["Summary", () => runReadingAction(inline, "summarize", output)],
+    ["Summarize", () => runReadingAction(inline, "summarize", output)],
     ["Grammar", () => runReadingAction(inline, "grammar", output)],
     ["Phrases", () => runReadingAction(inline, "phrases", output)],
-    ["Rewrite", () => runReadingAction(inline, "rewrite", output)],
+    ["Simplify", () => runReadingAction(inline, "rewrite", output)],
     ["Remove", () => removeInline(inline)]
   ];
 
@@ -244,7 +253,7 @@ function showInlinePanel(inline) {
     actions.append(button);
   }
 
-  panel.append(title, translation, actions, output);
+  panel.append(header, translation, actions, output);
   document.documentElement.appendChild(panel);
   positionPanel(panel, inline.getBoundingClientRect());
 }

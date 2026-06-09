@@ -12,6 +12,7 @@ The extension is built around a provider adapter layer, so the reading experienc
 - Translation cache for repeated selections
 - Clickable inline translations with a compact reading-tools panel
 - Reading actions for explain, summarize, grammar, phrases, and rewrite
+- `Alt+T` shortcut for translating the current selection
 - Modular translation providers
 - Gemini Developer API support
 - OpenAI Responses API support
@@ -27,6 +28,8 @@ The extension is built around a provider adapter layer, so the reading experienc
 5. Open any webpage, select text, and click the blue `T` button.
 
 After changing extension source code, reload the extension from `chrome://extensions` and refresh the webpage you are testing.
+
+Tip: select text and press `Alt+T` to translate without using the mouse. Click an inline translation to open reading tools or remove it.
 
 ## Provider Setup
 
@@ -106,7 +109,6 @@ src/
 
 ## Roadmap
 
-- Keyboard shortcut support
 - Better provider-specific error messages
 - Optional reading mode for translating paragraph-by-paragraph
 - Exportable vocabulary/history lists

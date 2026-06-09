@@ -58,7 +58,7 @@
 .iqt-inline {
   display: inline;
   margin-inline-start: 0.35em;
-  color: #00c853;
+  color: #00a84f;
   font: inherit;
   line-height: inherit;
 }
@@ -69,19 +69,16 @@
   cursor: pointer;
   font: inherit;
   line-height: inherit;
+  border-radius: 4px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: background-color 120ms ease, color 120ms ease;
 }
 
 .iqt-inline-text:hover {
+  background: rgba(0, 168, 79, 0.09);
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-
-.iqt-inline-close {
-  all: unset;
-  margin-inline-start: 0.25em;
-  color: #ef4444;
-  cursor: pointer;
-  font: inherit;
 }
 
 .iqt-loading {
@@ -108,9 +105,35 @@
   box-shadow: 0 16px 42px rgba(15, 23, 42, 0.26);
 }
 
+.iqt-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .iqt-panel-title {
   color: #111827;
   font: 700 13px/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.iqt-panel-icon-button {
+  all: initial;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font: 700 13px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.iqt-panel-icon-button:hover {
+  color: #111827;
+  background: #f1f5f9;
 }
 
 .iqt-panel-translation {
