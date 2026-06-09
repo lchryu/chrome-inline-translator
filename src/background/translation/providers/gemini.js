@@ -1,4 +1,4 @@
-export async function translateWithGemini({ text, pageTitle, settings }) {
+export async function translateWithGemini({ action = "translate", text, translatedText, pageTitle, settings }) {
   if (!settings.geminiApiKey) {
     throw new Error("Missing Gemini API key.");
   }
@@ -18,11 +18,9 @@ export async function translateWithGemini({ text, pageTitle, settings }) {
           parts: [
             {
               text: [
-                "Translate the selected webpage text naturally.",
-                "Return only the translated text, with no explanation.",
-                `Target language: ${settings.targetLanguage}.`,
-                `Source language: ${settings.sourceLanguage}.`,
+                buildGeminiInstruction(action, settings),
                 pageTitle ? `Page title: ${pageTitle}.` : "",
+                translatedText ? `Current translation: ${translatedText}` : "",
                 "Selected text:",
                 text
               ].filter(Boolean).join("\n")
@@ -41,18 +39,66 @@ export async function translateWithGemini({ text, pageTitle, settings }) {
   }
 
   const payload = await response.json();
-  const translatedText = extractGeminiText(payload);
+  const outputText = extractGeminiText(payload);
 
-  if (!translatedText) {
+  if (!outputText) {
     throw new Error("Gemini returned an empty response.");
+  }
+
+  if (action !== "translate") {
+    return {
+      action,
+      provider: "gemini",
+      outputText
+    };
   }
 
   return {
     provider: "gemini",
     sourceLanguage: settings.sourceLanguage,
     targetLanguage: settings.targetLanguage,
-    translatedText
+    translatedText: outputText
   };
+}
+
+function buildGeminiInstruction(action, settings) {
+  const targetLanguage = settings.targetLanguage || "vi";
+  const sourceLanguage = settings.sourceLanguage || "auto";
+  const instructions = {
+    explain: [
+      "Explain the selected webpage text clearly for a language learner.",
+      `Use ${targetLanguage}.`,
+      "Keep the answer compact and practical."
+    ],
+    summarize: [
+      "Summarize the selected webpage text.",
+      `Use ${targetLanguage}.`,
+      "Keep the answer concise."
+    ],
+    grammar: [
+      "Analyze the grammar of the selected text.",
+      `Use ${targetLanguage}.`,
+      "Focus on sentence structure, important phrases, and why the sentence means what it means."
+    ],
+    phrases: [
+      "Extract important vocabulary, idioms, and useful phrases from the selected text.",
+      `Use ${targetLanguage}.`,
+      "Give short meanings and keep the answer easy to scan."
+    ],
+    rewrite: [
+      "Rewrite the selected text in simpler language while preserving the meaning.",
+      `Use ${sourceLanguage === "auto" ? "the original language" : sourceLanguage}.`,
+      "Return only the rewritten text."
+    ],
+    translate: [
+      "Translate the selected webpage text naturally.",
+      "Return only the translated text, with no explanation.",
+      `Target language: ${targetLanguage}.`,
+      `Source language: ${sourceLanguage}.`
+    ]
+  };
+
+  return (instructions[action] ?? instructions.translate).join(" ");
 }
 
 function extractGeminiText(payload) {

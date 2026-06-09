@@ -1,9 +1,13 @@
 const TOOLBAR_ID = "iqt-toolbar";
+const PANEL_ID = "iqt-panel";
 const MIN_SELECTION_LENGTH = 1;
+
+const inlineBySelection = new Map();
 
 let selectedRange = null;
 let selectedText = "";
 let toolbar = null;
+let panel = null;
 
 document.addEventListener("mouseup", () => {
   window.setTimeout(handleSelectionChange, 0);
@@ -12,13 +16,29 @@ document.addEventListener("mouseup", () => {
 document.addEventListener("keyup", (event) => {
   if (event.key === "Escape") {
     removeToolbar();
+    removePanel();
     return;
   }
 
   handleSelectionChange();
 });
 
-document.addEventListener("scroll", removeToolbar, true);
+document.addEventListener("scroll", () => {
+  removeToolbar();
+  removePanel();
+}, true);
+
+document.addEventListener("mousedown", (event) => {
+  const target = event.target;
+
+  if (!(target instanceof Element)) {
+    return;
+  }
+
+  if (!target.closest(`#${TOOLBAR_ID}, #${PANEL_ID}, [data-iqt-inline="true"]`)) {
+    removePanel();
+  }
+});
 
 function handleSelectionChange() {
   const selection = window.getSelection();
@@ -70,7 +90,7 @@ function createToolbar() {
   const translateButton = document.createElement("button");
   translateButton.className = "iqt-button iqt-button-primary";
   translateButton.type = "button";
-  translateButton.title = "Dịch nhanh";
+  translateButton.title = "Quick translate";
   translateButton.textContent = "T";
   translateButton.addEventListener("mousedown", (event) => event.preventDefault());
   translateButton.addEventListener("click", translateSelectionInline);
@@ -78,7 +98,7 @@ function createToolbar() {
   const closeButton = document.createElement("button");
   closeButton.className = "iqt-button";
   closeButton.type = "button";
-  closeButton.title = "Đóng";
+  closeButton.title = "Close";
   closeButton.textContent = "x";
   closeButton.addEventListener("mousedown", (event) => event.preventDefault());
   closeButton.addEventListener("click", removeToolbar);
@@ -89,11 +109,29 @@ function createToolbar() {
 
 async function translateSelectionInline() {
   if (!selectedRange || !selectedText) {
-    showToast("Không tìm thấy đoạn text đã chọn.");
+    showToast("No selected text found.");
     return;
   }
 
-  const inline = insertInlineTranslation(selectedRange, "Đang dịch...", "iqt-loading");
+  const selectionKey = normalizeSelection(selectedText);
+  const existingInline = getConnectedInline(selectionKey);
+
+  if (existingInline) {
+    existingInline.remove();
+    inlineBySelection.delete(selectionKey);
+    removeToolbar();
+    window.getSelection()?.removeAllRanges();
+    return;
+  }
+
+  const inline = insertInlineTranslation({
+    range: selectedRange,
+    originalText: selectedText,
+    translatedText: "Translating...",
+    stateClass: "iqt-loading"
+  });
+
+  inlineBySelection.set(selectionKey, inline);
   removeToolbar();
 
   try {
@@ -105,34 +143,45 @@ async function translateSelectionInline() {
     });
 
     if (!response?.ok) {
-      throw new Error(response?.error ?? "Không dịch được đoạn này.");
+      throw new Error(response?.error ?? "Could not translate this text.");
     }
 
     updateInlineTranslation(inline, response.result.translatedText);
   } catch (error) {
     updateInlineTranslation(
       inline,
-      error instanceof Error ? error.message : "Không dịch được đoạn này.",
+      error instanceof Error ? error.message : "Could not translate this text.",
       "iqt-error"
     );
   }
 }
 
-function insertInlineTranslation(range, text, stateClass = "") {
+function insertInlineTranslation({ range, originalText, translatedText, stateClass = "" }) {
   const wrapper = document.createElement("span");
   wrapper.className = `iqt-inline ${stateClass}`.trim();
   wrapper.setAttribute("data-iqt-inline", "true");
+  wrapper.dataset.originalText = originalText;
+  wrapper.dataset.translatedText = translatedText;
 
-  const textNode = document.createElement("span");
+  const textNode = document.createElement("button");
   textNode.className = "iqt-inline-text";
-  textNode.textContent = `[${text}]`;
+  textNode.type = "button";
+  textNode.title = "Open reading tools";
+  textNode.textContent = `[${translatedText}]`;
+  textNode.addEventListener("click", (event) => {
+    event.stopPropagation();
+    showInlinePanel(wrapper);
+  });
 
   const close = document.createElement("button");
   close.className = "iqt-inline-close";
   close.type = "button";
-  close.title = "Xóa bản dịch";
+  close.title = "Remove translation";
   close.textContent = "x";
-  close.addEventListener("click", () => wrapper.remove());
+  close.addEventListener("click", (event) => {
+    event.stopPropagation();
+    removeInline(wrapper);
+  });
 
   wrapper.append(textNode, close);
 
@@ -144,22 +193,142 @@ function insertInlineTranslation(range, text, stateClass = "") {
   return wrapper;
 }
 
-function updateInlineTranslation(wrapper, text, stateClass = "") {
+function updateInlineTranslation(wrapper, translatedText, stateClass = "") {
   wrapper.className = `iqt-inline ${stateClass}`.trim();
+  wrapper.dataset.translatedText = translatedText;
   const textNode = wrapper.querySelector(".iqt-inline-text");
 
   if (textNode) {
-    textNode.textContent = `[${text}]`;
+    textNode.textContent = `[${translatedText}]`;
   }
+}
+
+function showInlinePanel(inline) {
+  removePanel();
+
+  panel = document.createElement("div");
+  panel.id = PANEL_ID;
+  panel.className = "iqt-panel";
+
+  const title = document.createElement("div");
+  title.className = "iqt-panel-title";
+  title.textContent = "Reading tools";
+
+  const translation = document.createElement("div");
+  translation.className = "iqt-panel-translation";
+  translation.textContent = inline.dataset.translatedText ?? "";
+
+  const actions = document.createElement("div");
+  actions.className = "iqt-panel-actions";
+
+  const output = document.createElement("div");
+  output.className = "iqt-panel-output";
+  output.hidden = true;
+
+  const buttons = [
+    ["Copy", () => copyInlineTranslation(inline)],
+    ["Explain", () => runReadingAction(inline, "explain", output)],
+    ["Summary", () => runReadingAction(inline, "summarize", output)],
+    ["Grammar", () => runReadingAction(inline, "grammar", output)],
+    ["Phrases", () => runReadingAction(inline, "phrases", output)],
+    ["Rewrite", () => runReadingAction(inline, "rewrite", output)],
+    ["Remove", () => removeInline(inline)]
+  ];
+
+  for (const [label, handler] of buttons) {
+    const button = document.createElement("button");
+    button.className = "iqt-panel-button";
+    button.type = "button";
+    button.textContent = label;
+    button.addEventListener("click", handler);
+    actions.append(button);
+  }
+
+  panel.append(title, translation, actions, output);
+  document.documentElement.appendChild(panel);
+  positionPanel(panel, inline.getBoundingClientRect());
+}
+
+function positionPanel(element, anchorRect) {
+  const panelRect = element.getBoundingClientRect();
+  const top = Math.min(
+    window.innerHeight - panelRect.height - 8,
+    Math.max(8, anchorRect.bottom + 8)
+  );
+  const left = Math.min(
+    window.innerWidth - panelRect.width - 8,
+    Math.max(8, anchorRect.left)
+  );
+
+  element.style.top = `${top}px`;
+  element.style.left = `${left}px`;
+}
+
+async function copyInlineTranslation(inline) {
+  const text = inline.dataset.translatedText ?? "";
+
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("Translation copied.");
+  } catch {
+    showToast("Could not copy translation.");
+  }
+}
+
+async function runReadingAction(inline, action, output) {
+  output.hidden = false;
+  output.className = "iqt-panel-output iqt-loading";
+  output.textContent = "Working...";
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: "RUN_AI_ACTION",
+      action,
+      text: inline.dataset.originalText,
+      translatedText: inline.dataset.translatedText,
+      pageUrl: window.location.href,
+      pageTitle: document.title
+    });
+
+    if (!response?.ok) {
+      throw new Error(response?.error ?? "Could not run this action.");
+    }
+
+    output.className = "iqt-panel-output";
+    output.textContent = response.result.outputText;
+  } catch (error) {
+    output.className = "iqt-panel-output iqt-error";
+    output.textContent = error instanceof Error ? error.message : "Could not run this action.";
+  }
+}
+
+function removeInline(inline) {
+  inlineBySelection.delete(normalizeSelection(inline.dataset.originalText ?? ""));
+  inline.remove();
+  removePanel();
+}
+
+function getConnectedInline(selectionKey) {
+  const inline = inlineBySelection.get(selectionKey);
+  return inline?.isConnected ? inline : null;
 }
 
 function removeToolbar() {
   toolbar?.remove();
 }
 
+function removePanel() {
+  panel?.remove();
+  panel = null;
+}
+
+function normalizeSelection(text) {
+  return text.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
 function isInsideExtensionUi(node) {
   const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
-  return Boolean(element?.closest?.(`#${TOOLBAR_ID}, [data-iqt-inline="true"]`));
+  return Boolean(element?.closest?.(`#${TOOLBAR_ID}, #${PANEL_ID}, [data-iqt-inline="true"]`));
 }
 
 function showToast(message) {

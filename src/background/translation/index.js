@@ -33,3 +33,42 @@ export async function translateText({ text, pageUrl, pageTitle, settings }) {
     settings: resolvedSettings
   });
 }
+
+export async function runAIAction({ action, text, translatedText, pageUrl, pageTitle, settings }) {
+  const cleanText = text?.trim();
+
+  if (!cleanText) {
+    throw new Error("No text selected.");
+  }
+
+  const resolvedSettings = {
+    provider: "mock",
+    sourceLanguage: "auto",
+    targetLanguage: "vi",
+    ...settings
+  };
+
+  if (resolvedSettings.provider === "gemini") {
+    return translateWithGemini({
+      action,
+      text: cleanText,
+      translatedText,
+      pageUrl,
+      pageTitle,
+      settings: resolvedSettings
+    });
+  }
+
+  if (resolvedSettings.provider === "openai") {
+    return translateWithOpenAI({
+      action,
+      text: cleanText,
+      translatedText,
+      pageUrl,
+      pageTitle,
+      settings: resolvedSettings
+    });
+  }
+
+  throw new Error("AI actions require the Gemini or OpenAI provider.");
+}

@@ -1,4 +1,4 @@
-export async function translateWithOpenAI({ text, pageTitle, settings }) {
+export async function translateWithOpenAI({ action = "translate", text, translatedText, pageTitle, settings }) {
   if (!settings.openaiApiKey) {
     throw new Error("Missing OpenAI API key.");
   }
@@ -17,11 +17,7 @@ export async function translateWithOpenAI({ text, pageTitle, settings }) {
           content: [
             {
               type: "input_text",
-              text: [
-                "You are a precise translation engine.",
-                "Translate the user's selected webpage text naturally.",
-                "Return only the translated text, with no explanation."
-              ].join(" ")
+              text: buildOpenAIInstruction(action, settings)
             }
           ]
         },
@@ -34,6 +30,7 @@ export async function translateWithOpenAI({ text, pageTitle, settings }) {
                 `Target language: ${settings.targetLanguage}.`,
                 `Source language: ${settings.sourceLanguage}.`,
                 pageTitle ? `Page title: ${pageTitle}.` : "",
+                translatedText ? `Current translation: ${translatedText}` : "",
                 "Selected text:",
                 text
               ].filter(Boolean).join("\n")
@@ -49,18 +46,70 @@ export async function translateWithOpenAI({ text, pageTitle, settings }) {
   }
 
   const payload = await response.json();
-  const translatedText = extractResponseText(payload);
+  const outputText = extractResponseText(payload);
 
-  if (!translatedText) {
+  if (!outputText) {
     throw new Error("OpenAI returned an empty response.");
+  }
+
+  if (action !== "translate") {
+    return {
+      action,
+      provider: "openai",
+      outputText
+    };
   }
 
   return {
     provider: "openai",
     sourceLanguage: settings.sourceLanguage,
     targetLanguage: settings.targetLanguage,
-    translatedText
+    translatedText: outputText
   };
+}
+
+function buildOpenAIInstruction(action, settings) {
+  const targetLanguage = settings.targetLanguage || "vi";
+  const sourceLanguage = settings.sourceLanguage || "auto";
+  const instructions = {
+    explain: [
+      "You are a concise reading assistant.",
+      "Explain the selected webpage text clearly for a language learner.",
+      `Use ${targetLanguage}.`,
+      "Keep the answer compact and practical."
+    ],
+    summarize: [
+      "You are a concise reading assistant.",
+      "Summarize the selected webpage text.",
+      `Use ${targetLanguage}.`,
+      "Keep the answer concise."
+    ],
+    grammar: [
+      "You are a language tutor.",
+      "Analyze the grammar of the selected text.",
+      `Use ${targetLanguage}.`,
+      "Focus on sentence structure, important phrases, and why the sentence means what it means."
+    ],
+    phrases: [
+      "You are a language tutor.",
+      "Extract important vocabulary, idioms, and useful phrases from the selected text.",
+      `Use ${targetLanguage}.`,
+      "Give short meanings and keep the answer easy to scan."
+    ],
+    rewrite: [
+      "You are a precise rewriting assistant.",
+      "Rewrite the selected text in simpler language while preserving the meaning.",
+      `Use ${sourceLanguage === "auto" ? "the original language" : sourceLanguage}.`,
+      "Return only the rewritten text."
+    ],
+    translate: [
+      "You are a precise translation engine.",
+      "Translate the user's selected webpage text naturally.",
+      "Return only the translated text, with no explanation."
+    ]
+  };
+
+  return (instructions[action] ?? instructions.translate).join(" ");
 }
 
 function extractResponseText(payload) {

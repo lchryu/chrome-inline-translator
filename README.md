@@ -1,49 +1,112 @@
-# Inline Quick Translate
+# Chrome Inline Translator
 
-Chrome Extension MV3 MVP for selecting text on a webpage and inserting a quick translation inline beside the original text.
+A lightweight Chrome extension for reading foreign-language webpages without losing your place. Select text, click the floating translate button, and the translation appears inline right beside the original sentence.
 
-## Current MVP
+The extension is built around a provider adapter layer, so the reading experience stays the same while the translation engine can be swapped between Gemini, OpenAI, Google Cloud Translation, or a mock provider for local UI testing.
 
-- Select text on any webpage.
-- Click the blue translate button.
-- The extension inserts the translation immediately after the selection.
-- Click the red `x` beside the inserted translation to remove it.
-- Translation providers are modular:
-  - `mock` for UI testing without keys.
-  - `google` for Google Cloud Translation API.
-  - `openai` for OpenAI Responses API.
-  - `gemini` for Gemini Developer API.
+## Features
 
-## Load In Chrome
+- Inline translation beside selected webpage text
+- Floating selection toolbar
+- Removable inline translations
+- Translation cache for repeated selections
+- Clickable inline translations with a compact reading-tools panel
+- Reading actions for explain, summarize, grammar, phrases, and rewrite
+- Modular translation providers
+- Gemini Developer API support
+- OpenAI Responses API support
+- Google Cloud Translation API support
+- Mock provider for zero-key local testing
+
+## Installation
 
 1. Open `chrome://extensions`.
-2. Enable Developer mode.
-3. Click Load unpacked.
-4. Select this folder.
-5. Open the extension settings and choose a provider.
+2. Enable **Developer mode**.
+3. Click **Load unpacked**.
+4. Select this repository folder.
+5. Open any webpage, select text, and click the blue `T` button.
 
-## Provider Notes
+After changing extension source code, reload the extension from `chrome://extensions` and refresh the webpage you are testing.
 
-`mock` is enabled by default and returns `[vi] selected text` so the inline UX can be tested immediately.
+## Provider Setup
 
-For Google Cloud Translation, set:
+Open the extension popup and click **Settings**.
 
-- Provider: `Google Cloud Translation`
-- Target language: `vi`
-- Google API key: your Google Cloud Translation API key
+### Gemini
 
-For OpenAI, set:
+Gemini is a good default for this extension because it has a developer free tier and works well for short contextual translations.
 
-- Provider: `OpenAI`
-- Target language: `vi`
-- OpenAI API key
-- OpenAI model, for example `gpt-4o-mini`
+1. Create a key in [Google AI Studio](https://aistudio.google.com/app/apikey).
+2. Set provider to `Gemini`.
+3. Paste the Gemini API key.
+4. Use `gemini-2.5-flash` as the model unless you have a reason to change it.
+5. Set target language to `vi` or your preferred language code.
 
-For Gemini, set:
+### OpenAI
 
-- Provider: `Gemini`
-- Target language: `vi`
-- Gemini API key from Google AI Studio
-- Gemini model, for example `gemini-2.5-flash`
+OpenAI is useful if you want high-quality contextual translation and later AI reading actions.
 
-The UI and translation provider are intentionally separate, so replacing the translation engine later only requires adding or editing files under `src/background/translation/providers`.
+1. Create a key in [OpenAI Platform](https://platform.openai.com/api-keys).
+2. Make sure API billing or credits are active.
+3. Set provider to `OpenAI`.
+4. Paste the OpenAI API key.
+5. Use a compact model such as `gpt-4o-mini`.
+
+ChatGPT Plus/Pro does not include OpenAI API quota. The API is billed separately.
+
+### Google Cloud Translation
+
+Google Cloud Translation is a strong option for fast, direct translation.
+
+1. Create a Google Cloud project.
+2. Enable Cloud Translation API.
+3. Create an API key.
+4. Set provider to `Google Cloud Translation`.
+5. Paste the key and set the target language.
+
+Google Cloud Translation has a monthly free tier for standard text translation, but billing setup may still be required.
+
+### Mock
+
+The mock provider requires no key. It returns `[target-language] selected text`, which is useful for testing the extension UI.
+
+## Project Structure
+
+```txt
+manifest.json
+src/
+  background/
+    background.js
+    translation/
+      index.js
+      providers/
+        gemini.js
+        google.js
+        mock.js
+        openai.js
+  content/
+    content.js
+    content.css
+  options/
+    options.html
+    options.css
+    options.js
+  popup/
+    popup.html
+    popup.css
+    popup.js
+```
+
+## Development Notes
+
+- `src/content` owns the webpage UI: selection toolbar, inline translations, and reading controls.
+- `src/background` owns provider calls and API key access.
+- `src/background/translation/providers` contains provider-specific adapters.
+- API keys are stored with `chrome.storage.sync`.
+
+## Roadmap
+
+- Keyboard shortcut support
+- Better provider-specific error messages
+- Optional reading mode for translating paragraph-by-paragraph
+- Exportable vocabulary/history lists

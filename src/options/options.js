@@ -14,6 +14,10 @@ const status = document.querySelector("#status");
 
 loadSettings();
 
+form.elements.provider.addEventListener("change", () => {
+  updateProviderFields(form.elements.provider.value);
+});
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -47,8 +51,16 @@ async function loadSettings() {
       field.value = value;
     }
   }
+
+  updateProviderFields(settings.provider);
 }
 
 function normalizeValue(value, fallback) {
   return String(value ?? "").trim() || fallback;
+}
+
+function updateProviderFields(provider) {
+  for (const field of document.querySelectorAll("[data-provider-field]")) {
+    field.hidden = field.dataset.providerField !== provider;
+  }
 }
