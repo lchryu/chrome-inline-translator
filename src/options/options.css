@@ -32,6 +32,13 @@ label {
   font-weight: 650;
 }
 
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
 [data-provider-field][hidden] {
   display: none;
 }
@@ -47,6 +54,12 @@ select {
   font: inherit;
 }
 
+.checkbox-row input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+
 button {
   width: fit-content;
   height: 38px;
@@ -57,6 +70,18 @@ button {
   border-radius: 6px;
   font: 700 14px/1 Inter, ui-sans-serif, system-ui, sans-serif;
   cursor: pointer;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button.secondary {
+  color: #172033;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
 }
 
 #status {

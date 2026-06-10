@@ -63,6 +63,18 @@
   line-height: inherit;
 }
 
+.iqt-placement-compact {
+  margin-inline-start: 0.25em;
+}
+
+.iqt-placement-block {
+  display: block;
+  margin: 0.32em 0 0.42em;
+  padding-inline-start: 0.85em;
+  color: #009a49;
+  border-left: 3px solid rgba(0, 168, 79, 0.28);
+}
+
 .iqt-inline-text {
   all: unset;
   color: inherit;
@@ -79,6 +91,10 @@
   background: rgba(0, 168, 79, 0.09);
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+.iqt-placement-block .iqt-inline-text {
+  display: inline;
 }
 
 .iqt-loading {

@@ -1,16 +1,29 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Inline Quick Translate</title>
+    <title>Chrome Inline Translator</title>
     <link rel="stylesheet" href="./popup.css">
   </head>
   <body>
     <main>
-      <strong>Inline Quick Translate</strong>
-      <p>Bôi đen text trên trang, bấm nút xanh để chèn bản dịch ngay bên cạnh.</p>
-      <button id="open-options" type="button">Settings</button>
+      <header>
+        <strong>Chrome Inline Translator</strong>
+        <button id="open-options" type="button">Settings</button>
+      </header>
+
+      <p>Select text on a webpage, press <kbd>Alt+T</kbd>, then click the translation for reading tools.</p>
+
+      <section>
+        <h2>Recent</h2>
+        <div id="history" class="list"></div>
+      </section>
+
+      <section>
+        <h2>Vocabulary</h2>
+        <div id="vocabulary" class="chips"></div>
+      </section>
     </main>
     <script type="module" src="./popup.js"></script>
   </body>

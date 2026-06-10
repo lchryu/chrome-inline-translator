@@ -31,6 +31,25 @@
           <input name="targetLanguage" placeholder="vi" autocomplete="off">
         </label>
 
+        <label>
+          Translation placement
+          <select name="placementMode">
+            <option value="inline">Inline with brackets</option>
+            <option value="compact">Compact inline</option>
+            <option value="block">Block below selection</option>
+          </select>
+        </label>
+
+        <label class="checkbox-row">
+          <input name="autoFallback" type="checkbox">
+          Auto fallback to another configured provider
+        </label>
+
+        <label class="checkbox-row">
+          <input name="saveHistory" type="checkbox">
+          Save translation history and vocabulary
+        </label>
+
         <label data-provider-field="google">
           Google API key
           <input name="googleApiKey" type="password" autocomplete="off">
@@ -56,7 +75,12 @@
           <input name="geminiModel" placeholder="gemini-2.5-flash-lite" autocomplete="off">
         </label>
 
-        <button type="submit">Save</button>
+        <div class="button-row">
+          <button type="submit">Save</button>
+          <button id="test-provider" type="button" class="secondary">Test provider</button>
+          <button id="clear-cache" type="button" class="secondary">Clear cache</button>
+          <button id="clear-history" type="button" class="secondary">Clear history</button>
+        </div>
         <p id="status" role="status"></p>
       </form>
     </main>

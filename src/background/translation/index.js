@@ -48,27 +48,66 @@ export async function runAIAction({ action, text, translatedText, pageUrl, pageT
     ...settings
   };
 
-  if (resolvedSettings.provider === "gemini") {
-    return translateWithGemini({
-      action,
-      text: cleanText,
-      translatedText,
-      pageUrl,
-      pageTitle,
-      settings: resolvedSettings
-    });
+  const aiProviders = buildAIProviderOrder(resolvedSettings);
+  const errors = [];
+
+  for (const provider of aiProviders) {
+    try {
+      if (provider === "gemini") {
+        return translateWithGemini({
+          action,
+          text: cleanText,
+          translatedText,
+          pageUrl,
+          pageTitle,
+          settings: {
+            ...resolvedSettings,
+            provider
+          }
+        });
+      }
+
+      if (provider === "openai") {
+        return translateWithOpenAI({
+          action,
+          text: cleanText,
+          translatedText,
+          pageUrl,
+          pageTitle,
+          settings: {
+            ...resolvedSettings,
+            provider
+          }
+        });
+      }
+    } catch (error) {
+      errors.push(`${provider}: ${error instanceof Error ? error.message : "Unknown error"}`);
+
+      if (!resolvedSettings.autoFallback) {
+        throw error;
+      }
+    }
   }
 
-  if (resolvedSettings.provider === "openai") {
-    return translateWithOpenAI({
-      action,
-      text: cleanText,
-      translatedText,
-      pageUrl,
-      pageTitle,
-      settings: resolvedSettings
-    });
-  }
+  throw new Error(`AI actions require Gemini or OpenAI. ${errors.join(" | ")}`);
+}
 
-  throw new Error("AI actions require the Gemini or OpenAI provider.");
+function buildAIProviderOrder(settings) {
+  const candidates = [
+    settings.provider,
+    "gemini",
+    "openai"
+  ];
+
+  return [...new Set(candidates)].filter((provider) => {
+    if (provider === "gemini") {
+      return Boolean(settings.geminiApiKey);
+    }
+
+    if (provider === "openai") {
+      return Boolean(settings.openaiApiKey);
+    }
+
+    return false;
+  });
 }

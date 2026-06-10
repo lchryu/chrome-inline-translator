@@ -8,6 +8,22 @@ let selectedRange = null;
 let selectedText = "";
 let toolbar = null;
 let panel = null;
+let panelOutput = null;
+let lastInline = null;
+let contentSettings = {
+  placementMode: "inline"
+};
+
+loadContentSettings();
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "sync" && changes.translatorSettings) {
+    contentSettings = {
+      ...contentSettings,
+      ...changes.translatorSettings.newValue
+    };
+  }
+});
 
 document.addEventListener("mouseup", () => {
   window.setTimeout(handleSelectionChange, 0);
@@ -27,6 +43,20 @@ document.addEventListener("keydown", (event) => {
   if (event.altKey && event.key.toLowerCase() === "t") {
     event.preventDefault();
     translateSelectionInline();
+    return;
+  }
+
+  const actionByKey = {
+    e: "explain",
+    s: "summarize",
+    g: "grammar",
+    p: "phrases"
+  };
+  const action = event.altKey ? actionByKey[event.key.toLowerCase()] : null;
+
+  if (action) {
+    event.preventDefault();
+    runShortcutAction(action);
   }
 });
 
@@ -114,7 +144,7 @@ function createToolbar() {
   return element;
 }
 
-async function translateSelectionInline() {
+async function translateSelectionInline(actionAfterTranslate = null) {
   if (!selectedRange || !selectedText) {
     showToast("No selected text found.");
     return;
@@ -135,10 +165,12 @@ async function translateSelectionInline() {
     range: selectedRange,
     originalText: selectedText,
     translatedText: "Translating...",
-    stateClass: "iqt-loading"
+    stateClass: "iqt-loading",
+    placementMode: contentSettings.placementMode
   });
 
   inlineBySelection.set(selectionKey, inline);
+  lastInline = inline;
   removeToolbar();
 
   try {
@@ -154,6 +186,14 @@ async function translateSelectionInline() {
     }
 
     updateInlineTranslation(inline, response.result.translatedText);
+    if (response.result.fallbackUsed) {
+      showToast(`Used ${response.result.provider} fallback.`);
+    }
+
+    if (actionAfterTranslate) {
+      const output = showInlinePanel(inline);
+      runReadingAction(inline, actionAfterTranslate, output);
+    }
   } catch (error) {
     updateInlineTranslation(
       inline,
@@ -163,18 +203,19 @@ async function translateSelectionInline() {
   }
 }
 
-function insertInlineTranslation({ range, originalText, translatedText, stateClass = "" }) {
+function insertInlineTranslation({ range, originalText, translatedText, stateClass = "", placementMode = "inline" }) {
   const wrapper = document.createElement("span");
-  wrapper.className = `iqt-inline ${stateClass}`.trim();
+  wrapper.className = `iqt-inline iqt-placement-${placementMode} ${stateClass}`.trim();
   wrapper.setAttribute("data-iqt-inline", "true");
   wrapper.dataset.originalText = originalText;
   wrapper.dataset.translatedText = translatedText;
+  wrapper.dataset.placementMode = placementMode;
 
   const textNode = document.createElement("button");
   textNode.className = "iqt-inline-text";
   textNode.type = "button";
   textNode.title = "Open reading tools";
-  textNode.textContent = `[${translatedText}]`;
+  textNode.textContent = formatTranslationText(translatedText, placementMode);
   textNode.addEventListener("click", (event) => {
     event.stopPropagation();
     showInlinePanel(wrapper);
@@ -191,17 +232,19 @@ function insertInlineTranslation({ range, originalText, translatedText, stateCla
 }
 
 function updateInlineTranslation(wrapper, translatedText, stateClass = "") {
-  wrapper.className = `iqt-inline ${stateClass}`.trim();
+  const placementMode = wrapper.dataset.placementMode ?? "inline";
+  wrapper.className = `iqt-inline iqt-placement-${placementMode} ${stateClass}`.trim();
   wrapper.dataset.translatedText = translatedText;
   const textNode = wrapper.querySelector(".iqt-inline-text");
 
   if (textNode) {
-    textNode.textContent = `[${translatedText}]`;
+    textNode.textContent = formatTranslationText(translatedText, placementMode);
   }
 }
 
 function showInlinePanel(inline) {
   removePanel();
+  lastInline = inline;
 
   panel = document.createElement("div");
   panel.id = PANEL_ID;
@@ -233,6 +276,7 @@ function showInlinePanel(inline) {
   const output = document.createElement("div");
   output.className = "iqt-panel-output";
   output.hidden = true;
+  panelOutput = output;
 
   const buttons = [
     ["Copy", () => copyInlineTranslation(inline)],
@@ -256,6 +300,7 @@ function showInlinePanel(inline) {
   panel.append(header, translation, actions, output);
   document.documentElement.appendChild(panel);
   positionPanel(panel, inline.getBoundingClientRect());
+  return output;
 }
 
 function positionPanel(element, anchorRect) {
@@ -313,6 +358,9 @@ async function runReadingAction(inline, action, output) {
 
 function removeInline(inline) {
   inlineBySelection.delete(normalizeSelection(inline.dataset.originalText ?? ""));
+  if (lastInline === inline) {
+    lastInline = null;
+  }
   inline.remove();
   removePanel();
 }
@@ -329,10 +377,48 @@ function removeToolbar() {
 function removePanel() {
   panel?.remove();
   panel = null;
+  panelOutput = null;
 }
 
 function normalizeSelection(text) {
   return text.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+async function loadContentSettings() {
+  const { translatorSettings } = await chrome.storage.sync.get(["translatorSettings"]);
+  contentSettings = {
+    ...contentSettings,
+    ...translatorSettings
+  };
+}
+
+function runShortcutAction(action) {
+  const inline = lastInline?.isConnected ? lastInline : null;
+
+  if (inline) {
+    const output = panel?.isConnected && panelOutput ? panelOutput : showInlinePanel(inline);
+    runReadingAction(inline, action, output);
+    return;
+  }
+
+  if (selectedRange && selectedText) {
+    translateSelectionInline(action);
+    return;
+  }
+
+  showToast("Select text or click a translation first.");
+}
+
+function formatTranslationText(translatedText, placementMode) {
+  if (placementMode === "compact") {
+    return translatedText;
+  }
+
+  if (placementMode === "block") {
+    return translatedText;
+  }
+
+  return `[${translatedText}]`;
 }
 
 function isInsideExtensionUi(node) {

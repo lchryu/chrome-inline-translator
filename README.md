@@ -13,6 +13,11 @@ The extension is built around a provider adapter layer, so the reading experienc
 - Clickable inline translations with a compact reading-tools panel
 - Reading actions for explain, summarize, grammar, phrases, and rewrite
 - `Alt+T` shortcut for translating the current selection
+- `Alt+E`, `Alt+S`, `Alt+G`, and `Alt+P` shortcuts for reading actions
+- Provider fallback when another configured provider can handle the request
+- Inline, compact, and block placement modes
+- Recent translation history and vocabulary capture
+- Provider test, clear cache, and clear history controls
 - Modular translation providers
 - Gemini Developer API support
 - OpenAI Responses API support
@@ -29,7 +34,7 @@ The extension is built around a provider adapter layer, so the reading experienc
 
 After changing extension source code, reload the extension from `chrome://extensions` and refresh the webpage you are testing.
 
-Tip: select text and press `Alt+T` to translate without using the mouse. Click an inline translation to open reading tools or remove it.
+Tip: select text and press `Alt+T` to translate without using the mouse. Click an inline translation to open reading tools or remove it. Use `Alt+E`, `Alt+S`, `Alt+G`, and `Alt+P` for explain, summarize, grammar, and phrases.
 
 ## Provider Setup
 
@@ -106,9 +111,10 @@ src/
 - `src/background` owns provider calls and API key access.
 - `src/background/translation/providers` contains provider-specific adapters.
 - API keys are stored with `chrome.storage.sync`.
+- Translation history, vocabulary, and cache entries are stored with `chrome.storage.local`.
 
 ## Roadmap
 
-- Better provider-specific error messages
 - Optional reading mode for translating paragraph-by-paragraph
 - Exportable vocabulary/history lists
+- Better provider-specific error messages
