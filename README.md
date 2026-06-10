@@ -42,7 +42,7 @@ Gemini is a good default for this extension because it has a developer free tier
 1. Create a key in [Google AI Studio](https://aistudio.google.com/app/apikey).
 2. Set provider to `Gemini`.
 3. Paste the Gemini API key.
-4. Use `gemini-2.5-flash` as the model unless you have a reason to change it.
+4. Use `gemini-2.5-flash-lite` as the model unless you have a reason to change it.
 5. Set target language to `vi` or your preferred language code.
 
 ### OpenAI

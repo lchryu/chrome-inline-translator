@@ -16,7 +16,17 @@ chrome.runtime.onInstalled.addListener(async () => {
         openaiApiKey: "",
         openaiModel: "gpt-4o-mini",
         geminiApiKey: "",
-        geminiModel: "gemini-2.5-flash"
+        geminiModel: "gemini-2.5-flash-lite"
+      }
+    });
+    return;
+  }
+
+  if (!existing.translatorSettings.geminiModel || existing.translatorSettings.geminiModel === "gemini-2.5-flash") {
+    await chrome.storage.sync.set({
+      translatorSettings: {
+        ...existing.translatorSettings,
+        geminiModel: "gemini-2.5-flash-lite"
       }
     });
   }

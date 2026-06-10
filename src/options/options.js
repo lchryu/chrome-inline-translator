@@ -6,7 +6,7 @@ const DEFAULT_SETTINGS = {
   openaiApiKey: "",
   openaiModel: "gpt-4o-mini",
   geminiApiKey: "",
-  geminiModel: "gemini-2.5-flash"
+  geminiModel: "gemini-2.5-flash-lite"
 };
 
 const form = document.querySelector("#settings-form");
@@ -30,7 +30,7 @@ form.addEventListener("submit", async (event) => {
     openaiApiKey: normalizeValue(formData.get("openaiApiKey"), ""),
     openaiModel: normalizeValue(formData.get("openaiModel"), "gpt-4o-mini"),
     geminiApiKey: normalizeValue(formData.get("geminiApiKey"), ""),
-    geminiModel: normalizeValue(formData.get("geminiModel"), "gemini-2.5-flash")
+    geminiModel: normalizeGeminiModel(formData.get("geminiModel"))
   };
 
   await chrome.storage.sync.set({ translatorSettings });
@@ -57,6 +57,11 @@ async function loadSettings() {
 
 function normalizeValue(value, fallback) {
   return String(value ?? "").trim() || fallback;
+}
+
+function normalizeGeminiModel(value) {
+  const model = normalizeValue(value, "gemini-2.5-flash-lite");
+  return model === "gemini-2.5-flash" ? "gemini-2.5-flash-lite" : model;
 }
 
 function updateProviderFields(provider) {
