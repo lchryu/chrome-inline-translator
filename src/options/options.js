@@ -1,5 +1,6 @@
 const DEFAULT_SETTINGS = {
-  provider: "mock",
+  provider: "auto",
+  aiProvider: "gemini",
   sourceLanguage: "auto",
   targetLanguage: "vi",
   googleApiKey: "",
@@ -63,6 +64,7 @@ function collectTranslatorSettings() {
 
   return {
     provider: formData.get("provider"),
+    aiProvider: normalizeAIProvider(formData.get("aiProvider")),
     sourceLanguage: normalizeValue(formData.get("sourceLanguage"), "auto"),
     targetLanguage: normalizeValue(formData.get("targetLanguage"), "vi"),
     googleApiKey: normalizeValue(formData.get("googleApiKey"), ""),
@@ -86,9 +88,14 @@ function normalizePlacementMode(value) {
   return ["inline", "compact", "block"].includes(mode) ? mode : "inline";
 }
 
+function normalizeAIProvider(value) {
+  const provider = normalizeValue(value, "gemini");
+  return ["auto", "gemini", "openai"].includes(provider) ? provider : "gemini";
+}
+
 function updateProviderFields(provider) {
   for (const field of document.querySelectorAll("[data-provider-field]")) {
-    field.hidden = field.dataset.providerField !== provider;
+    field.hidden = provider !== "auto" && field.dataset.providerField !== provider;
   }
 }
 

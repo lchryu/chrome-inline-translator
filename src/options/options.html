@@ -12,12 +12,22 @@
 
       <form id="settings-form">
         <label>
-          Provider
+          Translation provider
           <select name="provider">
+            <option value="auto">Auto recommended</option>
             <option value="mock">Mock test</option>
-            <option value="gemini">Gemini</option>
             <option value="google">Google Cloud Translation</option>
+            <option value="gemini">Gemini</option>
             <option value="openai">OpenAI</option>
+          </select>
+        </label>
+
+        <label>
+          AI reading provider
+          <select name="aiProvider">
+            <option value="gemini">Gemini</option>
+            <option value="openai">OpenAI</option>
+            <option value="auto">Auto from configured providers</option>
           </select>
         </label>
 

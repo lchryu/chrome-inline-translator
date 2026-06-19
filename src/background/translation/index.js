@@ -18,7 +18,8 @@ export async function translateText({ text, pageUrl, pageTitle, settings }) {
   }
 
   const resolvedSettings = {
-    provider: "mock",
+    provider: "auto",
+    aiProvider: "gemini",
     sourceLanguage: "auto",
     targetLanguage: "vi",
     ...settings
@@ -93,11 +94,10 @@ export async function runAIAction({ action, text, translatedText, pageUrl, pageT
 }
 
 function buildAIProviderOrder(settings) {
-  const candidates = [
-    settings.provider,
-    "gemini",
-    "openai"
-  ];
+  const preferred = settings.aiProvider === "auto" ? settings.provider : settings.aiProvider;
+  const candidates = preferred === "auto"
+    ? ["gemini", "openai"]
+    : [preferred, "gemini", "openai"];
 
   return [...new Set(candidates)].filter((provider) => {
     if (provider === "gemini") {

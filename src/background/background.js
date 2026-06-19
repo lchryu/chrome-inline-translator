@@ -7,7 +7,8 @@ const VOCABULARY_KEY = "vocabularyItems";
 const MAX_HISTORY_ITEMS = 120;
 
 const DEFAULT_SETTINGS = {
-  provider: "mock",
+  provider: "auto",
+  aiProvider: "gemini",
   sourceLanguage: "auto",
   targetLanguage: "vi",
   googleApiKey: "",
@@ -130,17 +131,22 @@ async function handleProviderTest(message) {
     ...message.settings
   });
   const provider = message.provider ?? translatorSettings.provider;
-
-  return translateText({
+  const testPayload = {
     text: "Hello, this is a quick translation test.",
     pageUrl: "",
     pageTitle: "Provider test",
     settings: {
       ...translatorSettings,
       provider,
-      autoFallback: false
+      autoFallback: provider === "auto" ? translatorSettings.autoFallback : false
     }
-  });
+  };
+
+  if (provider === "auto") {
+    return translateWithFallbacks(testPayload);
+  }
+
+  return translateText(testPayload);
 }
 
 async function handleGetHistory() {
@@ -174,6 +180,14 @@ function normalizeSettings(settings = {}) {
     ...settings
   };
 
+  if (!["auto", "mock", "gemini", "google", "openai"].includes(normalized.provider)) {
+    normalized.provider = "auto";
+  }
+
+  if (!["auto", "gemini", "openai"].includes(normalized.aiProvider)) {
+    normalized.aiProvider = "gemini";
+  }
+
   if (!normalized.geminiModel || normalized.geminiModel === "gemini-2.5-flash") {
     normalized.geminiModel = "gemini-2.5-flash-lite";
   }
@@ -203,7 +217,7 @@ async function translateWithFallbacks({ text, pageUrl, pageTitle, settings }) {
 
       return {
         ...result,
-        fallbackUsed: provider !== settings.provider,
+        fallbackUsed: settings.provider !== "auto" && provider !== settings.provider,
         requestedProvider: settings.provider
       };
     } catch (error) {
@@ -219,12 +233,9 @@ async function translateWithFallbacks({ text, pageUrl, pageTitle, settings }) {
 }
 
 function buildProviderOrder(settings) {
-  const candidates = [
-    settings.provider,
-    "gemini",
-    "google",
-    "openai"
-  ];
+  const candidates = settings.provider === "auto"
+    ? ["google", "gemini", "openai"]
+    : [settings.provider, "google", "gemini", "openai"];
 
   if (settings.provider === "mock") {
     candidates.push("mock");
@@ -256,6 +267,7 @@ function isProviderConfigured(provider, settings) {
 async function buildCacheKey(text, settings = {}) {
   const payload = [
     settings.provider ?? "mock",
+    settings.aiProvider ?? "gemini",
     settings.sourceLanguage ?? "auto",
     settings.targetLanguage ?? "vi",
     settings.openaiModel ?? "",

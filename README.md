@@ -15,6 +15,7 @@ The extension is built around a provider adapter layer, so the reading experienc
 - `Alt+T` shortcut for translating the current selection
 - `Alt+E`, `Alt+S`, `Alt+G`, and `Alt+P` shortcuts for reading actions
 - Provider fallback when another configured provider can handle the request
+- Recommended provider split: Google Cloud Translation for quick translate and Gemini for AI reading tools
 - Inline, compact, and block placement modes
 - Recent translation history and vocabulary capture
 - Provider test, clear cache, and clear history controls
@@ -39,6 +40,13 @@ Tip: select text and press `Alt+T` to translate without using the mouse. Click a
 ## Provider Setup
 
 Open the extension popup and click **Settings**.
+
+Recommended setup:
+
+- Translation provider: `Auto recommended`
+- AI reading provider: `Gemini`
+- Google API key: optional, used first for fast inline translation when configured
+- Gemini API key: used for AI reading actions and as the default free-tier fallback
 
 ### Gemini
 
