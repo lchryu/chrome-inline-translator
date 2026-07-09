@@ -1,6 +1,12 @@
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite";
-const FALLBACK_GEMINI_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
-const RETRYABLE_STATUSES = new Set(["UNAVAILABLE", "RESOURCE_EXHAUSTED", "ABORTED", "DEADLINE_EXCEEDED"]);
+const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite";
+const RETIRED_GEMINI_MODELS = new Set([
+  "gemini-2.0-flash-lite",
+  "gemini-2.0-flash-lite-001",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite"
+]);
+const FALLBACK_GEMINI_MODELS = ["gemini-3.1-flash-lite", "gemini-3.5-flash"];
+const RETRYABLE_STATUSES = new Set(["UNAVAILABLE", "RESOURCE_EXHAUSTED", "ABORTED", "DEADLINE_EXCEEDED", "NOT_FOUND"]);
 
 export async function translateWithGemini({ action = "translate", text, translatedText, pageTitle, settings }) {
   if (!settings.geminiApiKey) {
@@ -46,7 +52,7 @@ function buildModelFallbacks(preferredModel) {
 
 function normalizeGeminiModel(model) {
   const normalized = String(model ?? "").trim();
-  return normalized && normalized !== "gemini-2.5-flash" ? normalized : DEFAULT_GEMINI_MODEL;
+  return normalized && !RETIRED_GEMINI_MODELS.has(normalized) ? normalized : DEFAULT_GEMINI_MODEL;
 }
 
 function buildGeminiRequestBody({ action, text, translatedText, pageTitle, settings }) {

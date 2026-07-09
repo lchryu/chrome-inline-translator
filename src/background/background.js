@@ -15,7 +15,7 @@ const DEFAULT_SETTINGS = {
   openaiApiKey: "",
   openaiModel: "gpt-4o-mini",
   geminiApiKey: "",
-  geminiModel: "gemini-2.5-flash-lite",
+  geminiModel: "gemini-3.1-flash-lite",
   autoFallback: true,
   placementMode: "inline",
   saveHistory: true
@@ -188,8 +188,8 @@ function normalizeSettings(settings = {}) {
     normalized.aiProvider = "gemini";
   }
 
-  if (!normalized.geminiModel || normalized.geminiModel === "gemini-2.5-flash") {
-    normalized.geminiModel = "gemini-2.5-flash-lite";
+  if (isRetiredGeminiModel(normalized.geminiModel)) {
+    normalized.geminiModel = "gemini-3.1-flash-lite";
   }
 
   if (!["inline", "block", "compact"].includes(normalized.placementMode)) {
@@ -197,6 +197,15 @@ function normalizeSettings(settings = {}) {
   }
 
   return normalized;
+}
+
+function isRetiredGeminiModel(model) {
+  return !model || [
+    "gemini-2.0-flash-lite",
+    "gemini-2.0-flash-lite-001",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite"
+  ].includes(model);
 }
 
 async function translateWithFallbacks({ text, pageUrl, pageTitle, settings }) {

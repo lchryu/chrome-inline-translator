@@ -7,7 +7,7 @@ const DEFAULT_SETTINGS = {
   openaiApiKey: "",
   openaiModel: "gpt-4o-mini",
   geminiApiKey: "",
-  geminiModel: "gemini-2.5-flash-lite",
+  geminiModel: "gemini-3.1-flash-lite",
   autoFallback: true,
   placementMode: "inline",
   saveHistory: true
@@ -79,8 +79,13 @@ function collectTranslatorSettings() {
 }
 
 function normalizeGeminiModel(value) {
-  const model = normalizeValue(value, "gemini-2.5-flash-lite");
-  return model === "gemini-2.5-flash" ? "gemini-2.5-flash-lite" : model;
+  const model = normalizeValue(value, "gemini-3.1-flash-lite");
+  return [
+    "gemini-2.0-flash-lite",
+    "gemini-2.0-flash-lite-001",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite"
+  ].includes(model) ? "gemini-3.1-flash-lite" : model;
 }
 
 function normalizePlacementMode(value) {
