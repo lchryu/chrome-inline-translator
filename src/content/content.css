@@ -9,6 +9,7 @@
 
 .iqt-toolbar *,
 .iqt-inline *,
+.iqt-sentence-block *,
 .iqt-panel *,
 .iqt-toast * {
   box-sizing: border-box;
@@ -95,6 +96,75 @@
 
 .iqt-placement-block .iqt-inline-text {
   display: inline;
+}
+
+.iqt-sentence-block {
+  display: block;
+  margin: 0.55em 0 0.65em;
+  padding: 8px 10px;
+  color: #172033;
+  background: #f8fafc;
+  border: 1px solid #dbeafe;
+  border-left: 3px solid #14b8a6;
+  border-radius: 8px;
+  font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.iqt-sentence-header,
+.iqt-sentence-status {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.iqt-sentence-header {
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.iqt-sentence-status:not(:empty) {
+  margin-top: 6px;
+}
+
+.iqt-sentence-list {
+  display: grid;
+  gap: 6px;
+}
+
+.iqt-sentence-item {
+  all: unset;
+  display: grid;
+  gap: 3px;
+  padding: 7px 8px;
+  color: #172033;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.iqt-sentence-item:hover {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.iqt-sentence-original {
+  display: block;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.iqt-sentence-translated {
+  display: block;
+  color: #008f45;
+  font-size: 14px;
+  line-height: 1.42;
+}
+
+.iqt-sentence-item-error .iqt-sentence-translated {
+  color: #dc2626;
 }
 
 .iqt-loading {

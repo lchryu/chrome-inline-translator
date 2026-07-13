@@ -1,6 +1,8 @@
 const TOOLBAR_ID = "iqt-toolbar";
 const PANEL_ID = "iqt-panel";
 const MIN_SELECTION_LENGTH = 1;
+const MIN_SENTENCES_FOR_SPLIT = 2;
+const MAX_SENTENCES_FOR_BATCH = 12;
 
 const inlineBySelection = new Map();
 
@@ -161,7 +163,16 @@ async function translateSelectionInline(actionAfterTranslate = null) {
     return;
   }
 
-  const inline = insertInlineTranslation({
+  const sentences = splitIntoSentences(selectedText);
+  const shouldSplitSentences = !actionAfterTranslate && sentences.length >= MIN_SENTENCES_FOR_SPLIT;
+
+  const inline = shouldSplitSentences
+    ? insertSentenceTranslationBlock({
+      range: selectedRange,
+      originalText: selectedText,
+      sentences
+    })
+    : insertInlineTranslation({
     range: selectedRange,
     originalText: selectedText,
     translatedText: "Translating...",
@@ -172,6 +183,11 @@ async function translateSelectionInline(actionAfterTranslate = null) {
   inlineBySelection.set(selectionKey, inline);
   lastInline = inline;
   removeToolbar();
+
+  if (shouldSplitSentences) {
+    await translateSentenceBatch(inline, sentences);
+    return;
+  }
 
   try {
     const response = await chrome.runtime.sendMessage({
@@ -201,6 +217,141 @@ async function translateSelectionInline(actionAfterTranslate = null) {
       "iqt-error"
     );
   }
+}
+
+async function translateSentenceBatch(wrapper, sentences) {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: "TRANSLATE_BATCH",
+      items: sentences.map((text, index) => ({
+        id: String(index),
+        text
+      })),
+      pageUrl: window.location.href,
+      pageTitle: document.title
+    });
+
+    if (!response?.ok) {
+      throw new Error(response?.error ?? "Could not translate these sentences.");
+    }
+
+    updateSentenceTranslationBlock(wrapper, response.result.items ?? []);
+  } catch (error) {
+    wrapper.classList.remove("iqt-loading");
+    wrapper.classList.add("iqt-error");
+    const status = wrapper.querySelector(".iqt-sentence-status");
+
+    if (status) {
+      status.textContent = error instanceof Error ? error.message : "Could not translate these sentences.";
+    }
+  }
+}
+
+function insertSentenceTranslationBlock({ range, originalText, sentences }) {
+  const wrapper = document.createElement("span");
+  wrapper.className = "iqt-inline iqt-sentence-block iqt-loading";
+  wrapper.setAttribute("data-iqt-inline", "true");
+  wrapper.dataset.originalText = originalText;
+  wrapper.dataset.translatedText = "Translating sentences...";
+  wrapper.dataset.placementMode = "sentence-block";
+
+  const header = document.createElement("span");
+  header.className = "iqt-sentence-header";
+  header.textContent = `Translating ${sentences.length} sentences...`;
+
+  const list = document.createElement("span");
+  list.className = "iqt-sentence-list";
+
+  sentences.forEach((sentence, index) => {
+    const item = document.createElement("button");
+    item.className = "iqt-sentence-item";
+    item.type = "button";
+    item.dataset.index = String(index);
+    item.dataset.originalText = sentence;
+    item.dataset.translatedText = "";
+    item.title = "Open reading tools for this sentence";
+
+    const original = document.createElement("span");
+    original.className = "iqt-sentence-original";
+    original.textContent = sentence;
+
+    const translated = document.createElement("span");
+    translated.className = "iqt-sentence-translated";
+    translated.textContent = "Translating...";
+
+    item.append(original, translated);
+    item.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const sentenceInline = createVirtualInlineFromSentence(item);
+      showInlinePanel(sentenceInline);
+    });
+    list.append(item);
+  });
+
+  const status = document.createElement("span");
+  status.className = "iqt-sentence-status";
+
+  wrapper.append(header, list, status);
+
+  const insertionRange = range.cloneRange();
+  insertionRange.collapse(false);
+  insertionRange.insertNode(wrapper);
+
+  window.getSelection()?.removeAllRanges();
+  return wrapper;
+}
+
+function updateSentenceTranslationBlock(wrapper, items) {
+  const byId = new Map(items.map((item) => [String(item.id), item]));
+  const translations = [];
+  let fallbackProvider = "";
+
+  for (const item of wrapper.querySelectorAll(".iqt-sentence-item")) {
+    const result = byId.get(item.dataset.index);
+    const translated = item.querySelector(".iqt-sentence-translated");
+
+    if (!translated || !result) {
+      continue;
+    }
+
+    if (result.ok) {
+      const text = result.result.translatedText;
+      item.dataset.translatedText = text;
+      translated.textContent = text;
+      translations.push(text);
+
+      if (result.result.fallbackUsed) {
+        fallbackProvider = result.result.provider;
+      }
+    } else {
+      item.classList.add("iqt-sentence-item-error");
+      translated.textContent = result.error ?? "Could not translate this sentence.";
+    }
+  }
+
+  wrapper.classList.remove("iqt-loading");
+  wrapper.dataset.translatedText = translations.join("\n");
+  const header = wrapper.querySelector(".iqt-sentence-header");
+  const status = wrapper.querySelector(".iqt-sentence-status");
+
+  if (header) {
+    header.textContent = `${translations.length}/${items.length} sentences translated`;
+  }
+
+  if (status) {
+    status.textContent = fallbackProvider ? `Used ${fallbackProvider} fallback for some sentences.` : "";
+  }
+}
+
+function createVirtualInlineFromSentence(item) {
+  return {
+    dataset: {
+      originalText: item.dataset.originalText ?? "",
+      translatedText: item.dataset.translatedText ?? ""
+    },
+    getBoundingClientRect: () => item.getBoundingClientRect(),
+    remove: () => item.closest("[data-iqt-inline='true']")?.remove()
+  };
 }
 
 function insertInlineTranslation({ range, originalText, translatedText, stateClass = "", placementMode = "inline" }) {
@@ -419,6 +570,33 @@ function formatTranslationText(translatedText, placementMode) {
   }
 
   return `[${translatedText}]`;
+}
+
+function splitIntoSentences(text) {
+  const normalizedText = text.trim().replace(/\s+/g, " ");
+
+  if (!normalizedText) {
+    return [];
+  }
+
+  if ("Segmenter" in Intl) {
+    try {
+      const segmenter = new Intl.Segmenter(undefined, { granularity: "sentence" });
+      return [...segmenter.segment(normalizedText)]
+        .map((segment) => segment.segment.trim())
+        .filter(Boolean)
+        .slice(0, MAX_SENTENCES_FOR_BATCH);
+    } catch {
+      // Fall through to regex splitter.
+    }
+  }
+
+  const sentences = normalizedText
+    .split(/(?<=[.!?])\s+(?=[A-Z0-9"'])/g)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+
+  return (sentences.length > 0 ? sentences : [normalizedText]).slice(0, MAX_SENTENCES_FOR_BATCH);
 }
 
 function isInsideExtensionUi(node) {

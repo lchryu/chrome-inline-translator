@@ -7,6 +7,7 @@ The extension is built around a provider adapter layer, so the reading experienc
 ## Features
 
 - Inline translation beside selected webpage text
+- Sentence-by-sentence translation blocks for longer selections
 - Floating selection toolbar
 - Removable inline translations
 - Translation cache for repeated selections

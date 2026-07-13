@@ -5,6 +5,7 @@ const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 14;
 const HISTORY_KEY = "translationHistory";
 const VOCABULARY_KEY = "vocabularyItems";
 const MAX_HISTORY_ITEMS = 120;
+const MAX_BATCH_ITEMS = 12;
 
 const DEFAULT_SETTINGS = {
   provider: "auto",
@@ -39,6 +40,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (![
     "TRANSLATE_SELECTION",
+    "TRANSLATE_BATCH",
     "RUN_AI_ACTION",
     "TEST_PROVIDER",
     "GET_HISTORY",
@@ -65,6 +67,10 @@ async function handleMessage(message) {
     return handleAIAction(message);
   }
 
+  if (message.type === "TRANSLATE_BATCH") {
+    return handleBatchTranslation(message);
+  }
+
   if (message.type === "TEST_PROVIDER") {
     return handleProviderTest(message);
   }
@@ -82,6 +88,42 @@ async function handleMessage(message) {
   }
 
   return handleTranslation(message);
+}
+
+async function handleBatchTranslation(message) {
+  const items = Array.isArray(message.items) ? message.items.slice(0, MAX_BATCH_ITEMS) : [];
+
+  if (items.length === 0) {
+    throw new Error("No batch items to translate.");
+  }
+
+  const results = [];
+
+  for (const item of items) {
+    try {
+      const result = await handleTranslation({
+        text: item.text,
+        pageUrl: message.pageUrl,
+        pageTitle: message.pageTitle
+      });
+
+      results.push({
+        id: item.id,
+        text: item.text,
+        ok: true,
+        result
+      });
+    } catch (error) {
+      results.push({
+        id: item.id,
+        text: item.text,
+        ok: false,
+        error: error instanceof Error ? error.message : "Unknown translation error"
+      });
+    }
+  }
+
+  return { items: results };
 }
 
 async function handleTranslation(message) {
