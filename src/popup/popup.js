@@ -8,7 +8,7 @@ document.querySelector("#open-options").addEventListener("click", () => {
 loadHistory();
 
 async function loadHistory() {
-  const response = await chrome.runtime.sendMessage({ type: "GET_HISTORY" });
+  const response = await sendRuntimeMessage({ type: "GET_HISTORY" });
 
   if (!response?.ok) {
     historyEl.textContent = "Could not load history.";
@@ -17,6 +17,16 @@ async function loadHistory() {
 
   renderHistory(response.result.history ?? []);
   renderVocabulary(response.result.vocabulary ?? []);
+}
+
+async function sendRuntimeMessage(message) {
+  const chromeApi = globalThis.chrome;
+
+  if (!chromeApi?.runtime?.sendMessage) {
+    throw new Error("Extension context is not available. Please close and reopen this popup.");
+  }
+
+  return chromeApi.runtime.sendMessage(message);
 }
 
 function renderHistory(history) {

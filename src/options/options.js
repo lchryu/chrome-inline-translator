@@ -29,7 +29,7 @@ document.querySelector("#clear-history").addEventListener("click", clearHistory)
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  await chrome.storage.sync.set({ translatorSettings: collectTranslatorSettings() });
+  await setSyncStorage({ translatorSettings: collectTranslatorSettings() });
   status.textContent = "Saved.";
   window.setTimeout(() => {
     status.textContent = "";
@@ -37,7 +37,7 @@ form.addEventListener("submit", async (event) => {
 });
 
 async function loadSettings() {
-  const { translatorSettings } = await chrome.storage.sync.get(["translatorSettings"]);
+  const { translatorSettings } = await getSyncStorage(["translatorSettings"]);
   const settings = { ...DEFAULT_SETTINGS, ...translatorSettings };
 
   for (const [key, value] of Object.entries(settings)) {
@@ -108,7 +108,7 @@ async function testProvider() {
   status.textContent = "Testing provider...";
 
   try {
-    const response = await chrome.runtime.sendMessage({
+    const response = await sendRuntimeMessage({
       type: "TEST_PROVIDER",
       provider: form.elements.provider.value,
       settings: collectTranslatorSettings()
@@ -125,11 +125,41 @@ async function testProvider() {
 }
 
 async function clearCache() {
-  const response = await chrome.runtime.sendMessage({ type: "CLEAR_CACHE" });
+  const response = await sendRuntimeMessage({ type: "CLEAR_CACHE" });
   status.textContent = response?.ok ? `Cleared ${response.result.cleared} cached items.` : "Could not clear cache.";
 }
 
 async function clearHistory() {
-  const response = await chrome.runtime.sendMessage({ type: "CLEAR_HISTORY" });
+  const response = await sendRuntimeMessage({ type: "CLEAR_HISTORY" });
   status.textContent = response?.ok ? "History cleared." : "Could not clear history.";
+}
+
+async function sendRuntimeMessage(message) {
+  const chromeApi = globalThis.chrome;
+
+  if (!chromeApi?.runtime?.sendMessage) {
+    throw new Error("Extension context is not available. Reload the extension settings page.");
+  }
+
+  return chromeApi.runtime.sendMessage(message);
+}
+
+async function getSyncStorage(keys) {
+  const chromeApi = globalThis.chrome;
+
+  if (!chromeApi?.storage?.sync?.get) {
+    throw new Error("Extension storage is not available. Reload the extension settings page.");
+  }
+
+  return chromeApi.storage.sync.get(keys);
+}
+
+async function setSyncStorage(value) {
+  const chromeApi = globalThis.chrome;
+
+  if (!chromeApi?.storage?.sync?.set) {
+    throw new Error("Extension storage is not available. Reload the extension settings page.");
+  }
+
+  return chromeApi.storage.sync.set(value);
 }

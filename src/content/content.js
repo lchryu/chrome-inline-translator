@@ -18,14 +18,16 @@ let contentSettings = {
 
 loadContentSettings();
 
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === "sync" && changes.translatorSettings) {
-    contentSettings = {
-      ...contentSettings,
-      ...changes.translatorSettings.newValue
-    };
-  }
-});
+if (getChromeAPI()?.storage?.onChanged) {
+  getChromeAPI().storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "sync" && changes.translatorSettings) {
+      contentSettings = {
+        ...contentSettings,
+        ...changes.translatorSettings.newValue
+      };
+    }
+  });
+}
 
 document.addEventListener("mouseup", () => {
   window.setTimeout(handleSelectionChange, 0);
@@ -190,7 +192,7 @@ async function translateSelectionInline(actionAfterTranslate = null) {
   }
 
   try {
-    const response = await chrome.runtime.sendMessage({
+    const response = await sendRuntimeMessage({
       type: "TRANSLATE_SELECTION",
       text: selectedText,
       pageUrl: window.location.href,
@@ -221,7 +223,7 @@ async function translateSelectionInline(actionAfterTranslate = null) {
 
 async function translateSentenceBatch(wrapper, sentences) {
   try {
-    const response = await chrome.runtime.sendMessage({
+    const response = await sendRuntimeMessage({
       type: "TRANSLATE_BATCH",
       items: sentences.map((text, index) => ({
         id: String(index),
@@ -486,7 +488,7 @@ async function runReadingAction(inline, action, output) {
   output.textContent = "Working...";
 
   try {
-    const response = await chrome.runtime.sendMessage({
+    const response = await sendRuntimeMessage({
       type: "RUN_AI_ACTION",
       action,
       text: inline.dataset.originalText,
@@ -536,11 +538,15 @@ function normalizeSelection(text) {
 }
 
 async function loadContentSettings() {
-  const { translatorSettings } = await chrome.storage.sync.get(["translatorSettings"]);
-  contentSettings = {
-    ...contentSettings,
-    ...translatorSettings
-  };
+  try {
+    const { translatorSettings } = await getSyncStorage(["translatorSettings"]);
+    contentSettings = {
+      ...contentSettings,
+      ...translatorSettings
+    };
+  } catch {
+    // The page may still be running an old content script after extension reload.
+  }
 }
 
 function runShortcutAction(action) {
@@ -610,4 +616,28 @@ function showToast(message) {
   toast.textContent = message;
   document.documentElement.appendChild(toast);
   window.setTimeout(() => toast.remove(), 2800);
+}
+
+async function sendRuntimeMessage(message) {
+  const chromeApi = getChromeAPI();
+
+  if (!chromeApi?.runtime?.sendMessage) {
+    throw new Error("Extension context is not available. Refresh this page after reloading the extension.");
+  }
+
+  return chromeApi.runtime.sendMessage(message);
+}
+
+async function getSyncStorage(keys) {
+  const chromeApi = getChromeAPI();
+
+  if (!chromeApi?.storage?.sync?.get) {
+    throw new Error("Extension storage is not available. Refresh this page after reloading the extension.");
+  }
+
+  return chromeApi.storage.sync.get(keys);
+}
+
+function getChromeAPI() {
+  return globalThis.chrome;
 }
